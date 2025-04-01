@@ -8,6 +8,10 @@ app.use(express.static(__dirname + '/public'))
 app.set('view engine', 'ejs')
 // ejs 사용하기
 
+app.use(express.json())
+app.use(express.urlencoded({extended:true}))
+// 유저가 데이터를 보내면 서버에서 꺼내서 쓸 수 있도록
+// 요청.body
 
 
 // mongodb 연결 코드
@@ -63,4 +67,28 @@ app.get('/list', async (요청, 응답) => { // await을 쓰기 위해 async 붙
 
 app.get('/time', (요청, 응답) => {
     응답.render('time.ejs', {time : new Date()})
+})
+
+app.get('/write', (요청, 응답) => {
+    응답.render('write.ejs')
+})
+
+app.post('/add', async (요청, 응답) => { // submit 버튼 누르면 post 요청 실행!
+    console.log(요청.body) // 유저가 보낸 데이터 출력가능 (object 형식으로!)
+
+    try {
+        if (요청.body.title == '') {
+            응답.send('제목입력해라')
+        } else {
+            await db.collection('post').insertOne({title : 요청.body.title, content : 요청.body.content})
+            응답.redirect('/list') // 이렇게 하면 유저를 다른 페이지로 이동가능
+        }
+    } catch (e) {
+        console.log(e) // 에러 메세지 출력
+        응답.status(500).send('서버 비상!') // 에러시 에러코드 전송 (500은 서버 잘못으로 인한 에러)
+    }
+})
+
+app.get('/detail/:aaa', () => { // 유저가 :aaa 자리에 아무문자나 입력시에 코드 실행
+
 })
