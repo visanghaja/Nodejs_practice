@@ -2,6 +2,7 @@ const express = require('express')
 const app = express()
 // express 라이브러리 사용하겠다는 뜻
 
+
 app.use(express.static(__dirname + '/public'))
 // 이렇게 server.js 에 넣어주어야 css 쓸 수 있음!
 
@@ -15,7 +16,8 @@ app.use(express.urlencoded({extended:true}))
 
 
 // mongodb 연결 코드
-const { MongoClient } = require('mongodb')
+const { MongoClient, ObjectId } = require('mongodb')
+// ObjectId 사용가능
 
 let db;
 const url = 'mongodb+srv://nodejs1208:james041208@cluster0.dgihutf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
@@ -74,7 +76,7 @@ app.get('/write', (요청, 응답) => {
 })
 
 app.post('/add', async (요청, 응답) => { // submit 버튼 누르면 post 요청 실행!
-    console.log(요청.body) // 유저가 보낸 데이터 출력가능 (object 형식으로!)
+    // console.log(요청.body) // 유저가 보낸 데이터 출력가능 (object 형식으로!)
 
     try {
         if (요청.body.title == '') {
@@ -89,6 +91,17 @@ app.post('/add', async (요청, 응답) => { // submit 버튼 누르면 post 요
     }
 })
 
-app.get('/detail/:aaa', () => { // 유저가 :aaa 자리에 아무문자나 입력시에 코드 실행
+app.get('/detail/:id', async (요청, 응답) => { // 유저가 :id 자리에 아무문자나 입력시에 코드 실행
+    // 요청.params // :aaa 자리에 입력한거 즉, 유저가 url 에 입력한거 가져와줌
 
+    try {
+        let result = await db.collection('post').findOne({ _id : new ObjectId(요청.params.id)})
+        if (result == null) { // id 길이는 맞을때
+            응답.status(404).send('이상한 url 입력함')
+        }
+        응답.render('detail.ejs', {posts : result})
+    } catch (e) {
+        console.log(e)
+        응답.status(404).send('이상한 url 입력함') // 404 는 유저문제!
+    }
 })
