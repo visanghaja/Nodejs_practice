@@ -17,6 +17,7 @@
                 <h4>
                     <a href="/detail/<%= posts[i]._id %>"><%= posts[i].title %></a>
                 </h4>
+                <a href="/edit/<%= posts[i]._id %>">✏️</a>
                 <p><%= posts[i].content %></p>
             </div>
         <% } %>

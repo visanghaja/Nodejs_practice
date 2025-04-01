@@ -2,6 +2,11 @@ const express = require('express')
 const app = express()
 // express 라이브러리 사용하겠다는 뜻
 
+// mongodb 연결 코드
+const { MongoClient, ObjectId } = require('mongodb')
+// ObjectId 사용가능
+
+const methodOverride = require('method-override')
 
 app.use(express.static(__dirname + '/public'))
 // 이렇게 server.js 에 넣어주어야 css 쓸 수 있음!
@@ -14,10 +19,8 @@ app.use(express.urlencoded({extended:true}))
 // 유저가 데이터를 보내면 서버에서 꺼내서 쓸 수 있도록
 // 요청.body
 
+app.use(methodOverride('_method'))
 
-// mongodb 연결 코드
-const { MongoClient, ObjectId } = require('mongodb')
-// ObjectId 사용가능
 
 let db;
 const url = 'mongodb+srv://nodejs1208:james041208@cluster0.dgihutf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
@@ -104,4 +107,31 @@ app.get('/detail/:id', async (요청, 응답) => { // 유저가 :id 자리에 �
         console.log(e)
         응답.status(404).send('이상한 url 입력함') // 404 는 유저문제!
     }
+})
+
+app.get('/edit/:id', async (요청, 응답) => {
+    let result = await db.collection('post').findOne({ _id : new ObjectId(요청.params.id) })
+    응답.render('edit.ejs', {posts : result})
+})
+
+app.put('/edit', async (요청, 응답) => {
+    
+    // await db.collection('post').updateOne({ _id : 1 }, {$inc : { like : 1 }}) $mul 는 더하기 $unset 은 필드값 삭제
+
+    // await db.collection('post').updateMany({ like : {$gt : 10} }, {$inc : { like : 1 }}) $gte $lt $lte $ne
+    
+    try {
+        let result = await db.collection('post').updateOne({ _id : new ObjectId(요청.body.id) }, {$set : {title : 요청.body.title, content : 요청.body.content}})
+        if (!요청.body.title || !요청.body.content) { // !inputname 해서 비었는지 아닌지 확인가능!
+            응답.status(404).send('빈칸 X') // 이렇게 하면 db에 적용되기는 함!
+        } else if (result == null){
+            응답.status(404).send('id 건드리지 마라')
+        }
+        
+    } catch (e) {
+        console.log(e)
+        응답.status(404).send('이상하게 입력함')
+    }
+    
+    응답.redirect('/list')
 })
