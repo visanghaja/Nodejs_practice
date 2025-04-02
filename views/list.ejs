@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="/main.css">
 </head>
 <body class="grey-bg">
 
@@ -24,12 +24,40 @@
         <% } %>
     </div>
 
+    <div class="page-button">
+        <button>
+            <a href="/list/1">1</a>
+        </button>
+        <button>
+            <a href="/list/2">2</a>
+        </button>
+        <button>
+            <a href="/list/3">3</a>
+        </button>
+    </div>
+
+    <a href="/list/next/<%= posts[posts.length-1]._id %>">다음</a>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
     <script>
+
+        // axios.get('/URL').then((r)=>{console.log(r)
+
+        // }).catch(()=>{
+        //     // 에러시 실행할 코드
+        // })
+
         document.querySelectorAll('.delete').forEach((e1) => {
-            e1.addEventListener('click', function() {
+            e1.addEventListener('click', function(e) {
                 fetch('/delete?docid=' + e1.dataset.id, {
                     method : "DELETE"
                 })
+                .then((r)=>r.text())
+                .then((r)=>{ e.target.parentElement.style.display = 'none' } ) // list box를 안보이도록
+                // 서버에 보내는게 object 이면 r.json()
+                // 여기서 r에는 삭제완료가 들어감 (서버에 있는)
+                // 크롬 console에 나타남
                 
             })
         })
