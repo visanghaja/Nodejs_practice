@@ -2,6 +2,8 @@ const express = require('express')
 const app = express()
 // express 라이브러리 사용하겠다는 뜻
 
+require('dotenv').config()
+
 // mongodb 연결 코드
 const { MongoClient, ObjectId } = require('mongodb')
 // ObjectId 사용가능
@@ -16,8 +18,28 @@ const bcrypt = require('bcrypt')
 
 const MongoStore = require('connect-mongo')
 
-require('dotenv').config()
-require('dofij')
+const { S3Client } = require('@aws-sdk/client-s3')
+const multer = require('multer')
+const multerS3 = require('multer-s3')
+const s3 = new S3Client({
+  region : 'ap-northeast-2',
+  credentials : {
+      accessKeyId : process.env.S3_KEY,
+      secretAccessKey : process.env.S3_SECRET
+  }
+})
+
+const upload = multer({
+  storage: multerS3({
+    s3: s3,
+    bucket: 'nodejspractice1208',
+    key: function (요청, file, cb) {
+      cb(null, Date.now().toString()) //업로드시 파일명 변경가능
+    }
+  })
+})
+
+
 
 app.use(passport.initialize())
 app.use(session({
@@ -45,10 +67,10 @@ app.use(express.urlencoded({extended:true}))
 
 app.use(methodOverride('_method'))
 
+let connectDB = require('./database.js')
 
 let db;
-const url = 'mongodb+srv://nodejs1208:james041208@cluster0.dgihutf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
-new MongoClient(url).connect().then((client) => { // 이렇게 하면 mongodb에 접속
+connectDB.then((client) => { // 이렇게 하면 mongodb에 접속
     console.log('DB연결성공') // 접속이 성공하면 forum 이라는 db에 연결해라
     db = client.db('forum');
     app.listen(process.env.PORT, () => {
@@ -57,6 +79,12 @@ new MongoClient(url).connect().then((client) => { // 이렇게 하면 mongodb에
     // 서버 띄우는 코드도 여기 안에다 넣기
 }).catch((err) => {
     console.log(err) // 에러나면 에러 출력
+})
+
+
+app.use('/list', (요청, 응답, next) => {
+    console.log(new Date())
+    next()
 })
 
 app.get('/', (요청, 응답) => { // PORT 열기
@@ -107,20 +135,23 @@ app.get('/write', (요청, 응답) => {
     응답.render('write.ejs')
 })
 
-app.post('/add', async (요청, 응답) => { // submit 버튼 누르면 post 요청 실행!
+app.post('/add', (요청, 응답) => { // submit 버튼 누르면 post 요청 실행!
     // console.log(요청.body) // 유저가 보낸 데이터 출력가능 (object 형식으로!)
 
-    try {
-        if (요청.body.title == '') {
-            응답.send('제목입력해라')
-        } else {
-            await db.collection('post').insertOne({title : 요청.body.title, content : 요청.body.content})
-            응답.redirect('/list') // 이렇게 하면 유저를 다른 페이지로 이동가능
-        }
-    } catch (e) {
-        console.log(e) // 에러 메세지 출력
-        응답.status(500).send('서버 비상!') // 에러시 에러코드 전송 (500은 서버 잘못으로 인한 에러)
-    }
+    upload.single('img1')(요청, 응답, async (err) => {
+        if (err) return 응답.send('업로드에러')
+            try {
+                if (요청.body.title == '') {
+                    응답.send('제목입력해라')
+                } else {
+                    await db.collection('post').insertOne({title : 요청.body.title, content : 요청.body.content, img : 요청.file.location})
+                    응답.redirect('/list') // 이렇게 하면 유저를 다른 페이지로 이동가능
+                }
+            } catch (e) {
+                console.log(e) // 에러 메세지 출력
+                응답.status(500).send('서버 비상!') // 에러시 에러코드 전송 (500은 서버 잘못으로 인한 에러)
+            }
+    })
 })
 
 app.get('/detail/:id', async (요청, 응답) => { // 유저가 :id 자리에 아무문자나 입력시에 코드 실행
@@ -201,11 +232,20 @@ app.get('/list/next/:id', async (요청, 응답) => {
     응답.render('list.ejs', { posts : result })
 })
 
+function blank_check(요청, 응답, next) {
+    if (!요청.body.username && !요청.body.password) {
+        응답.send('빈칸으로 제출하지 말아라')
+    } else {
+        next()
+    }
+    
+}
+
 app.get('/sign', async (요청, 응답) => {
     응답.render('sign.ejs')
 })
 
-app.post('/sign', async (요청, 응답) => { 
+app.post('/sign', blank_check,async (요청, 응답) => { 
     let password_hash = await bcrypt.hash(요청.body.password, 10) // 문자를 얼마나 랜덤화 시킬것인지 (10이 국룰)
 
     try {
@@ -270,7 +310,7 @@ app.get('/login', async (요청, 응답) => {
     응답.render('login.ejs')
 })
 
-app.post('/login', async (요청, 응답, next) => {
+app.post('/login', blank_check, async (요청, 응답, next) => {
     // 위에있는 아이디/비번 비교하는 코드 실행됨
     passport.authenticate('local', (error, user, info) => { // error 에는 에러시에 뭐 들어옴 user 성공시 로그인한 유저정보 info 실패시 이유
         if (error) return 응답.status(500).json(error)
@@ -289,3 +329,7 @@ app.get('/mypage', async (요청, 응답) => {
     }
     응답.render('mypage.ejs', {id : 요청.user.username})
 })
+
+app.use('/shop', require('./routes/shop.js'))
+
+app.use('/board/sub', require('./routes/sub.js'))
