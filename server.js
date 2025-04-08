@@ -16,6 +16,9 @@ const bcrypt = require('bcrypt')
 
 const MongoStore = require('connect-mongo')
 
+require('dotenv').config()
+require('dofij')
+
 app.use(passport.initialize())
 app.use(session({
     secret : '암호화에 쓸 비번', // 세션의 document id 는 암호화해서 유저에게 보냄
@@ -48,7 +51,7 @@ const url = 'mongodb+srv://nodejs1208:james041208@cluster0.dgihutf.mongodb.net/?
 new MongoClient(url).connect().then((client) => { // 이렇게 하면 mongodb에 접속
     console.log('DB연결성공') // 접속이 성공하면 forum 이라는 db에 연결해라
     db = client.db('forum');
-    app.listen(8080, () => {
+    app.listen(process.env.PORT, () => {
         console.log('http://localhost:8080 에서 서버 실행중')
     })
     // 서버 띄우는 코드도 여기 안에다 넣기
