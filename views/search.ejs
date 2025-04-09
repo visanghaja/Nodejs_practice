@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="/main.css">
+</head>
+<body class="grey-bg">
+
+    <%- include('nav.ejs') %>
+    <!-- 이렇게 하면 nav.ejs 에 있는 내용이 복사됨 -->
+
+    <form action="/search" method="POST">
+        <input name="titlename" class="search">
+        <button type="submit" class="search-send">검색</button>
+    </form>
+
+    <h4>검색결과</h4>
+
+    <div class="white-bg">
+        <% for (let i = 0; i < posts.length; i++){ %>
+            <div class="list-box">
+                <h4>
+                    <a href="/detail/<%= posts[i]._id %>"><%= posts[i].title %></a>
+                </h4>
+                <a href="/edit/<%= posts[i]._id %>">✏️</a>
+                <span class="delete" data-id="<%= posts[i]._id %>">🗑️</span>
+                <p><%= posts[i].content %></p>
+            </div>
+        <% } %>
+    </div>
+
+    <div class="page-button">
+        <button>
+            <a href="/list/1">1</a>
+        </button>
+        <button>
+            <a href="/list/2">2</a>
+        </button>
+        <button>
+            <a href="/list/3">3</a>
+        </button>
+    </div>
+
+</body>
+</html>

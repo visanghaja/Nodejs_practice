@@ -11,6 +11,19 @@
     <%- include('nav.ejs') %>
     <!-- 이렇게 하면 nav.ejs 에 있는 내용이 복사됨 -->
 
+    <form action="/search" method="POST">
+        <input name="titlename" class="search">
+        <button type="submit" class="search-send">검색</button>
+    </form>
+
+    <!-- <script>
+        from 안쓰고 하기!
+        document.querySelector('.search-send').addEventListener('click', function() {
+            let 입력한거 = document.querySelector('.search').value
+            location.href = '/search?val=' + 입력한거 // 이 URL 로 get 요청 날려주세요
+        })
+    </script> -->
+
     <div class="white-bg">
         <% for (let i = 0; i < posts.length; i++){ %>
             <div class="list-box">
@@ -18,7 +31,11 @@
                     <a href="/detail/<%= posts[i]._id %>"><%= posts[i].title %></a>
                 </h4>
                 <a href="/edit/<%= posts[i]._id %>">✏️</a>
-                <span class="delete" data-id="<%= posts[i]._id %>">🗑️</span>
+                
+                <% if (posts[i].user && user && posts[i].user.toString() === user.toString()) { %>
+                    <span class="delete" data-id="<%= posts[i]._id %>">🗑️</span>
+                <% } %>
+                
                 <p><%= posts[i].content %></p>
             </div>
         <% } %>
@@ -48,20 +65,44 @@
         //     // 에러시 실행할 코드
         // })
 
-        document.querySelectorAll('.delete').forEach((e1) => {
-            e1.addEventListener('click', function(e) {
-                fetch('/delete?docid=' + e1.dataset.id, {
-                    method : "DELETE"
-                })
-                .then((r)=>r.text())
-                .then((r)=>{ e.target.parentElement.style.display = 'none' } ) // list box를 안보이도록
-                // 서버에 보내는게 object 이면 r.json()
-                // 여기서 r에는 삭제완료가 들어감 (서버에 있는)
-                // 크롬 console에 나타남
-                // 여기다가 모달창 만들 수도 있음 (html)
+        // document.querySelectorAll('.delete').forEach((e1) => {
+        //     e1.addEventListener('click', function(e) {
+        //         fetch('/delete?docid=' + e1.dataset.id, {
+        //             method : "DELETE"
+        //         })
+        //         .then((r)=>r.text())
+        //         .then((r)=>{})
+        //         .then((r)=>{ e.target.parentElement.style.display = 'none' } ) // list box를 안보이도록
+        //         // 서버에 보내는게 object 이면 r.json()
+        //         // 여기서 r에는 삭제완료가 들어감 (서버에 있는)
+        //         // 크롬 console에 나타남
+        //         // 여기다가 모달창 만들 수도 있음 (html)
                 
-            })
-        })
+        //     })
+        // })
+
+            document.querySelectorAll('.delete').forEach((e1) => {
+                e1.addEventListener('click', function (e) {
+                fetch('/delete?docid=' + e1.dataset.id, {
+                    method: 'DELETE'
+                })
+                .then((r) => {
+                    if (!r.ok) throw new Error('삭제 실패');
+                    return r.text();
+                })
+                .then((result) => {
+                    if (result === '삭제완료') {
+                        e.target.parentElement.style.display = 'none';
+                    } else {
+                        alert('삭제 실패: ' + result);
+                    }
+                })
+                .catch((err) => {
+                    alert('삭제에 실패했습니다.');
+                    console.error(err);
+                });
+            });
+        });
     </script>
 </body>
 </html>

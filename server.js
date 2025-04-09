@@ -83,7 +83,7 @@ connectDB.then((client) => { // 이렇게 하면 mongodb에 접속
 
 
 app.use('/list', (요청, 응답, next) => {
-    console.log(new Date())
+    // console.log(new Date())
     next()
 })
 
@@ -118,9 +118,13 @@ app.get('/list', async (요청, 응답) => { // await을 쓰기 위해 async 붙
     // console.log(result[0].title) // 첫번째 document 의 제목 출력
     // 응답.send(result[0].title)
 
-    응답.render('list.ejs', { posts : result }) // ejs 는 sendFile 이 아니라 render로!
+    const userid = new ObjectId(요청.user.id)
+
+    응답.render('list.ejs', { posts : result, user : userid }) // ejs 는 sendFile 이 아니라 render로!
     // {posts : result}로 object 형식으로 데이터 보내주기
     // 응답은 1개만 가능
+
+    console.log(요청.user)
 })
 
 app.get('/time', (요청, 응답) => {
@@ -144,7 +148,13 @@ app.post('/add', (요청, 응답) => { // submit 버튼 누르면 post 요청 �
                 if (요청.body.title == '') {
                     응답.send('제목입력해라')
                 } else {
-                    await db.collection('post').insertOne({title : 요청.body.title, content : 요청.body.content, img : 요청.file.location})
+                    await db.collection('post').insertOne({
+                        title : 요청.body.title, 
+                        content : 요청.body.content, 
+                        img : 요청.file ? 요청.file.location : '',
+                        user : 요청.user.id,
+                        username : 요청.user.username
+                    })
                     응답.redirect('/list') // 이렇게 하면 유저를 다른 페이지로 이동가능
                 }
             } catch (e) {
@@ -171,7 +181,14 @@ app.get('/detail/:id', async (요청, 응답) => { // 유저가 :id 자리에 �
 
 app.get('/edit/:id', async (요청, 응답) => {
     let result = await db.collection('post').findOne({ _id : new ObjectId(요청.params.id) })
-    응답.render('edit.ejs', {posts : result})
+    const userid = new ObjectId(요청.user.id)
+    const resultid = new ObjectId(result.user)
+    if (userid.equals(resultid)) {
+        응답.render('edit.ejs', {posts : result})
+    } else {
+        응답.send('님이 쓴 글 아님')
+    }
+    
 })
 
 app.put('/edit', async (요청, 응답) => {
@@ -197,7 +214,10 @@ app.put('/edit', async (요청, 응답) => {
 })
 
 app.delete('/delete', async (요청, 응답) => {
-    await db.collection('post').deleteOne({ _id : new ObjectId(요청.query.docid) })
+    await db.collection('post').deleteOne({
+        _id : new ObjectId(요청.query.docid),
+        user : 요청.user.id
+    })
     응답.send('삭제완료') // ajax 요청 사용시 응답.rediret 응답.render 사용 안하는게 나음
 })
 
@@ -245,7 +265,7 @@ app.get('/sign', async (요청, 응답) => {
     응답.render('sign.ejs')
 })
 
-app.post('/sign', blank_check,async (요청, 응답) => { 
+app.post('/sign', blank_check, async (요청, 응답) => { 
     let password_hash = await bcrypt.hash(요청.body.password, 10) // 문자를 얼마나 랜덤화 시킬것인지 (10이 국룰)
 
     try {
@@ -333,3 +353,31 @@ app.get('/mypage', async (요청, 응답) => {
 app.use('/shop', require('./routes/shop.js'))
 
 app.use('/board/sub', require('./routes/sub.js'))
+
+app.post('/search', async (요청, 응답) => {
+    // let result = await db.collection('post').find({title : 요청.body.titlename}).toArray() // 전체에서 이거랑 정확히 일치하는거 가져오기
+    // let result = await db.collection('post').find({title : { $regex : 요청.body.titlename}}).toArray() 정규식
+    // .find 로 정규식 쓰면 많이 느림
+    // let result = await db.collection('post').find({$text : { $search : 요청.body.titlename}}).toArray() index
+    let 검색조건 = [
+        {
+            $search : {
+                index : 'title_index',
+                text : {query : 요청.body.titlename, path : 'title'}
+            }
+        },
+        // { $sort : {  }}, // 검색 결과는 어떻게 정렬할지 _id : 1 하면 id 순으로 정렬
+        // { $limit : 10}, // 결과수 제한
+        // { $skip : 10}, // 건너뛰기 (limit 과 skip 을 잘 이용해서 페이지네이션 만들기 가능)
+        // { $project : { title : 0 }}, 필드 숨기기는 project (title : 0 은 title 필드를 숨겨달라는 거고 1은 보여달라는 뜻)
+    ]
+
+    let result = await db.collection('post').aggregate(검색조건).toArray()
+    응답.render('search.ejs', {posts : result})
+})
+
+// // from 안쓰고 get으로 받는 방법
+// app.get('/search', async (요청, 응답) => {
+//     let result = await db.collection('post').find({title : 요청.query.val}).toArray()
+//     응답.render('search.ejs', {posts : result})
+// })
