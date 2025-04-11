@@ -91,6 +91,7 @@ app.get('/', (요청, 응답) => { // PORT 열기
     // 응답.sendFile(__dirname + '/index.html')
     // 유저에게 html 파일 보내주려면 sendFile 로 보내주기
     // __dirname 은 server.js가 담긴 폴더의 절대 경로
+    console.log(요청.user)
     응답.render('index.ejs')
 })
 
@@ -169,13 +170,34 @@ app.get('/detail/:id', async (요청, 응답) => { // 유저가 :id 자리에 �
 
     try {
         let result = await db.collection('post').findOne({ _id : new ObjectId(요청.params.id)})
+        let comment_result = await db.collection('comment').find({parent : new ObjectId(요청.params.id)}).toArray()
+        // parent id index 만들어 쓰면 좋을듯?
         if (result == null) { // id 길이는 맞을때
             응답.status(404).send('이상한 url 입력함')
         }
-        응답.render('detail.ejs', {posts : result})
+        응답.render('detail.ejs', {posts : result, comment : comment_result})
     } catch (e) {
         console.log(e)
         응답.status(404).send('이상한 url 입력함') // 404 는 유저문제!
+    }
+})
+
+app.post('/detail/:id', async (요청, 응답) => {
+    try {
+        let parent = await db.collection('post').findOne({ _id : new ObjectId(요청.params.id)}) 
+        if (요청.body.comment == '') {
+            응답.send('댓글을 입력하세욧')
+        } else {
+            await db.collection('comment').insertOne({
+                comment : 요청.body.comment,
+                writerId : 요청.user.id,
+                writer : 요청.user.username,
+                parent : new ObjectId(parent._id)
+            })
+            응답.redirect('back') // 이렇게 하면 이전 페이지로 이동시켜줌
+        }
+    } catch (e) {
+        console.log(e)
     }
 })
 
@@ -381,3 +403,28 @@ app.post('/search', async (요청, 응답) => {
 //     let result = await db.collection('post').find({title : 요청.query.val}).toArray()
 //     응답.render('search.ejs', {posts : result})
 // })
+
+app.post('/invite', async (요청, 응답) => {
+    await db.collection('chat_room').insertOne({
+        member : [new ObjectId(요청.body.writer), new ObjectId(요청.user.id)],
+        date : new Date()
+    })
+    응답.redirect('/chatlist')
+})
+
+app.get('/chatlist', async (요청, 응답) => {
+    let result = await db.collection('chat_room').find({member : new ObjectId(요청.user.id)}).toArray()
+    console.log(요청.user)
+    console.log(JSON.stringify(result))
+    응답.render('chat_list.ejs', {chat : result})
+})
+
+app.get('/chat/:id', async (요청, 응답) => {
+    let result = await db.collection('chat_room').findOne({_id : new ObjectId(요청.params.id)})
+    const isMember = result.member.some(m => m.toString() === 요청.user.id.toString())
+    if (isMember) {
+        응답.render('chatroom', {result : result})
+    } else {
+        응답.send('권한 없음')
+    }
+})

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="/main.css">
+</head>
+<body class="grey-bg">
+
+    <%- include('nav.ejs') %>
+    <!-- 이렇게 하면 nav.ejs 에 있는 내용이 복사됨 -->
+
+    <div class="white-bg">
+        <% for (let i = 0; i < chat.length; i++){ %>
+            <div class="list-box">
+                <h4>
+                    <a href="/chat/<%= chat[i]._id %>">채팅방 <%= i %></a>
+                </h4>
+            </div>
+        <% } %>
+    </div>
+
+</body>
+</html>

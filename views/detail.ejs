@@ -14,8 +14,31 @@
     <div class="detail-bg">
         <h4><%= posts.title %></h4>
         <p><%= posts.content %></p>
+        <p>writer : <%= posts.username %></p>
         <img src="<%= posts.img %>">
     </div>
 
+    <!-- query로 ? =  -->
+    <div> 
+        <form action="/invite" method="POST">
+            <button type="submit">초대</button>
+            <input name="writer" value="<%= posts.user %>" style = 'display: none'>
+        </form>
+    </div>
+
+    <div class="comment">
+        <form action="/detail/<%= posts._id %>" method="POST">
+            <input name="comment" class="search">
+            <button type="submit" class="search-send">입력</button>
+        </form>
+
+        <div class="white-bg">
+            <% for (let i = 0; i < comment.length; i++){ %>
+                <div class="list-box">
+                    <p><strong><%= comment[i].writer %></strong> : <%= comment[i].comment %></p>
+                </div>
+            <% } %>
+        </div>
+    </div>
 </body>
 </html>
