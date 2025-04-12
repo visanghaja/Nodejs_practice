@@ -40,19 +40,28 @@ const upload = multer({
 })
 
 
-
 app.use(passport.initialize())
-app.use(session({
+
+const sessionMiddleware = session({
     secret : '암호화에 쓸 비번', // 세션의 document id 는 암호화해서 유저에게 보냄
     resave : false, // 유저가 서버로 요청할 때마다 세션 갱신할건지
-    saveUninitialized : false, // 로그인 안해도 세션 만들것인지
+    saveUninitialized : true, // 로그인 안해도 세션 만들것인지
     cookie : {maxAge : 60 * 60 * 1000}, // 세션 유지 시간 즉, 유효기간
     store : MongoStore.create({
         mongoUrl : 'mongodb+srv://nodejs1208:james041208@cluster0.dgihutf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
         dbName : 'forum'
     })
-}))
+})
+app.use(sessionMiddleware)
 app.use(passport.session())
+
+
+const { createServer } = require('http') // socket.io
+const { Server } = require('socket.io')
+const server = createServer(app)
+const io = new Server(server) 
+
+io.engine.use(sessionMiddleware)
 
 app.use(express.static(__dirname + '/public'))
 // 이렇게 server.js 에 넣어주어야 css 쓸 수 있음!
@@ -73,7 +82,7 @@ let db;
 connectDB.then((client) => { // 이렇게 하면 mongodb에 접속
     console.log('DB연결성공') // 접속이 성공하면 forum 이라는 db에 연결해라
     db = client.db('forum');
-    app.listen(process.env.PORT, () => {
+    server.listen(process.env.PORT, () => {
         console.log('http://localhost:8080 에서 서버 실행중')
     })
     // 서버 띄우는 코드도 여기 안에다 넣기
@@ -427,4 +436,39 @@ app.get('/chat/:id', async (요청, 응답) => {
     } else {
         응답.send('권한 없음')
     }
+})
+
+io.on('connection', (socket) => { // 유저가 웹소켓 연결 시 서버에서 코드 실행
+    // socket 은 user, io 는 server / on 은 받음 emit 은 전송!
+    // socket.on('dataname', (data) => {
+    //     io.emit('dataname', '20') // 이렇게 하면 서버가 모든 유저한테 보낼 수 있음
+    // })
+
+    // socket.on('ask-join', (data) => {
+    //     socket.join(data) // 이렇게 하면 룸 생성 가능! (모든 유저한테 보내는 것을 방지하려고)
+    // }) 
+
+    // socket.on('message', (data) => {
+    //     io.to(data.room).emit('broadcast', data.msg) // to() 써서 특정 room에만 보내기!
+    // })
+
+    // socket.on('broadcast', (data) => { // broadcast 받기!
+        
+    // })
+
+    socket.on('ask-join', (data) => {
+        if (data.member.includes(socket.request.session.passport.user.id)) {
+            socket.join(data._id)
+        }
+    })
+
+    socket.on('message-send', async (data) => {
+        await db.collection('chat_content').insertOne({
+            parentRomm : new ObjectId(data.room),
+            content : data.msg,
+            who : new ObjectId(socket.request.session.passport.user.id)
+        })
+        console.log('user sent : ', data)
+        io.to(data.room).emit('message-broadcast', data.msg)
+    })
 })

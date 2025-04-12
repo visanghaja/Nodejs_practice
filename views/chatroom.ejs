@@ -14,6 +14,10 @@
     <%= JSON.stringify(result) %>
     <div class="detail-bg">
         <div class="chat-screen">
+          <% for (let i = 0; i < chat.length; i++){ %>
+
+          <% } %>
+
           <div class="chat-box"><span>안녕하세요</span></div>
           <div class="chat-box"><span>안녕하세요</span></div>
           <div class="chat-box mine"><span>안녕하세요</span></div>
@@ -22,6 +26,23 @@
       <div class="chat-form">
         <input class="chat-input">
         <button class="chat-button">전송</button>
-  </div> 
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.2/client-dist/socket.io.min.js"></script>
+  <script>
+    const socket = io() // 유저 web socket 연결
+    // socket.emit('ask-join', '1') // user 가 서버한테 보내기 (room join 요청)
+    socket.emit('ask-join',  <%- JSON.stringify(result) %>) // 채팅방 들어오면 바로 룸 참가
+
+    document.querySelector('.chat-button').addEventListener('click', function(){
+      const message = document.querySelector('.chat-input').value      
+      socket.emit('message-send', { msg : message, room : '<%= result._id %>'}) // room 번호도 같이 넣어주기
+    })
+
+    socket.on('message-broadcast', (data) => { // 유저는 서버메세지 받으면 html 넣기
+        document.querySelector('.chat-screen').insertAdjacentHTML('beforeend',
+            `<div class="chat-box"><span>${data}</span></div>` // 여기 html 이 querySelector 로 찾은데에다 들어감! (백틱!)
+        )
+    })
+  </script> 
 </body>
 </html>
