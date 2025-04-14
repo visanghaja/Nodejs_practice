@@ -104,5 +104,14 @@
             });
         });
     </script>
+
+    <script>
+        let eventSource = new EventSource('stream/list')
+        eventSource.addEventListener('msg', function(e){ // 서버가 msg 이름으로 데이터 보내면 콜백함수 안에 코드가 실행됨!
+            console.log(e.data) // 서버가 보낸 코드는 e.data 안에 들어있음!
+            let 가져온거 = JSON.parse(e.data) // JSON 형태인거 object 형태로 바꿔주기
+            document.querySelector('.white-bg').insertAdjacentHTML('afterbegin', `<div class = "list-box"><h4>${가져온거.title}</h4></div>`)
+        })
+    </script>
 </body>
 </html>

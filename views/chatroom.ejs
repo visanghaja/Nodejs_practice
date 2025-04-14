@@ -14,13 +14,13 @@
     <%= JSON.stringify(result) %>
     <div class="detail-bg">
         <div class="chat-screen">
-          <% for (let i = 0; i < chat.length; i++){ %>
-
+          <% for (let i = 0; i < chat.length; i++) { %>
+            <% if (chat[i].who == user) { %>
+              <div class="chat-box mine"><span><%= chat[i].content %></span></div>
+            <% } else { %>
+              <div class="chat-box"><span><%= chat[i].content %></span></div>
+            <% } %>
           <% } %>
-
-          <div class="chat-box"><span>안녕하세요</span></div>
-          <div class="chat-box"><span>안녕하세요</span></div>
-          <div class="chat-box mine"><span>안녕하세요</span></div>
         </div>
       </div>
       <div class="chat-form">
@@ -31,7 +31,7 @@
   <script>
     const socket = io() // 유저 web socket 연결
     // socket.emit('ask-join', '1') // user 가 서버한테 보내기 (room join 요청)
-    socket.emit('ask-join',  <%- JSON.stringify(result) %>) // 채팅방 들어오면 바로 룸 참가
+    socket.emit('ask-join',  <%= result %> ) // 채팅방 들어오면 바로 룸 참가
 
     document.querySelector('.chat-button').addEventListener('click', function(){
       const message = document.querySelector('.chat-input').value      

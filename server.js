@@ -430,15 +430,17 @@ app.get('/chatlist', async (요청, 응답) => {
 
 app.get('/chat/:id', async (요청, 응답) => {
     let result = await db.collection('chat_room').findOne({_id : new ObjectId(요청.params.id)})
+    let content = await db.collection('chat_content').find({parentRoom : result._id}).toArray()
     const isMember = result.member.some(m => m.toString() === 요청.user.id.toString())
     if (isMember) {
-        응답.render('chatroom', {result : result})
+        응답.render('chatroom', {result : result, chat : content, user : 요청.user.id})
     } else {
         응답.send('권한 없음')
     }
 })
 
 io.on('connection', (socket) => { // 유저가 웹소켓 연결 시 서버에서 코드 실행
+    console.log('socket!')
     // socket 은 user, io 는 server / on 은 받음 emit 은 전송!
     // socket.on('dataname', (data) => {
     //     io.emit('dataname', '20') // 이렇게 하면 서버가 모든 유저한테 보낼 수 있음
@@ -457,18 +459,35 @@ io.on('connection', (socket) => { // 유저가 웹소켓 연결 시 서버에서
     // })
 
     socket.on('ask-join', (data) => {
+        console.log('connect!')
         if (data.member.includes(socket.request.session.passport.user.id)) {
             socket.join(data._id)
         }
+        
     })
 
     socket.on('message-send', async (data) => {
+        console.log('send!')
         await db.collection('chat_content').insertOne({
-            parentRomm : new ObjectId(data.room),
+            parentRoom : new ObjectId(data.room),
             content : data.msg,
             who : new ObjectId(socket.request.session.passport.user.id)
         })
         console.log('user sent : ', data)
         io.to(data.room).emit('message-broadcast', data.msg)
     })
+    
 })
+
+app.get('/stream/list', (요청, 응답) => {
+
+    응답.writeHead(200, { // 이걸 써서 header 정보 수정가능!
+      "Connection": "keep-alive",
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+    });
+  
+    응답.write('event: msg\n'); // 응답.write 로 유저한테 데이터 쏴주기
+    응답.write('data: 바보\n\n');
+  
+  });
